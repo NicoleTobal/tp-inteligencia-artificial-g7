@@ -2,27 +2,27 @@ import React, { Component } from 'react';
 import './App.css';
 var synaptic = require('synaptic');
 
-const CERVEZA_PILSNER = 1;
-const CERVEZA_STOUT = 10;
-const CERVEZA_PORTER = 11;
-const CERVEZA_BARLEY = 100;
-const CERVEZA_LAGER = 101;
+const CERVEZA_PILSNER = 0;
+const CERVEZA_STOUT = 1;
+const CERVEZA_PORTER = 2;
+const CERVEZA_BARLEY = 3;
+const CERVEZA_LAGER = 4;
 
-const SABOR_AGRIDULCE = 1;
-const SABOR_ACIDO = 10;
-const SABOR_PICANTE = 11;
-const SABOR_SALADO = 100;
-const SABOR_DULCE = 101;
+const SABOR_AGRIDULCE = 0;
+const SABOR_ACIDO = 1;
+const SABOR_PICANTE = 2;
+const SABOR_SALADO = 3;
+const SABOR_DULCE = 4;
 
-const NIVEL_MUY_FUERTE = 1;
-const NIVEL_FUERTE = 10;
-const NIVEL_NORMAL = 11;
-const NIVEL_SUAVE = 100;
+const NIVEL_MUY_FUERTE = 0;
+const NIVEL_FUERTE = 1;
+const NIVEL_NORMAL = 2;
+const NIVEL_SUAVE = 3;
 
-const GRASAS_ALTO = 1;
-const GRASAS_MEDIO = 10;
-const GRASAS_BAJO = 11;
-const GRASAS_NO = 100;
+const GRASAS_ALTO = 0;
+const GRASAS_MEDIO = 1;
+const GRASAS_BAJO = 2;
+const GRASAS_NO = 3;
 
 const AHUMADO_NO = 0;
 const AHUMADO_SI = 1;
@@ -30,11 +30,11 @@ const AHUMADO_SI = 1;
 const CALIENTE_NO = 0;
 const CALIENTE_SI = 1;
 
-const COCINA_JAPONESA = 1;
-const COCINA_ITALIANA = 10;
-const COCINA_ALEMANA = 11;
-const COCINA_FRANCESA = 100;
-const COCINA_REGIONAL = 101;
+const COCINA_JAPONESA = 0;
+const COCINA_ITALIANA = 1;
+const COCINA_ALEMANA = 2;
+const COCINA_FRANCESA = 3;
+const COCINA_REGIONAL = 4;
 
 class App extends Component {
 
@@ -42,6 +42,13 @@ class App extends Component {
     super(props);
 
     this.cervezas = [CERVEZA_BARLEY, CERVEZA_LAGER, CERVEZA_PILSNER, CERVEZA_PORTER, CERVEZA_STOUT];
+    this.cervezasNombres = {
+      Barley: CERVEZA_BARLEY,
+      Lager: CERVEZA_LAGER,
+      Pilsner: CERVEZA_PILSNER,
+      Porter: CERVEZA_PORTER,
+      Stout: CERVEZA_STOUT
+    };
     
     this.comidas = [];
     this.comidas.push(this.comida('Cordero asado', SABOR_SALADO, NIVEL_FUERTE, GRASAS_BAJO, AHUMADO_SI, CALIENTE_SI, COCINA_REGIONAL, CERVEZA_PORTER));
@@ -101,8 +108,10 @@ class App extends Component {
       ahumado: '',
       caliente: '',
       cocina: '',
+      cerveza: '',
       output: '',
-      network: this.createNetwork()
+      precision: '',
+      network: this.createNetwork(),
     };
     
   }
@@ -135,7 +144,7 @@ class App extends Component {
   }
 
   createNetwork() {
-    const { Layer, Network } = synaptic;
+    const { Layer, Network, Neuron } = synaptic;
 
     // Crea las capas
     /*
@@ -149,6 +158,10 @@ class App extends Component {
     let inputLayer = new Layer(6);
     let hiddenLayer = new Layer(4);
     let outputLayer = new Layer(1);
+    
+    outputLayer.set({
+      squash: Neuron.squash.IDENTITY
+    });
 
     // Une las capas y forma la red
     inputLayer.project(hiddenLayer);
@@ -162,10 +175,11 @@ class App extends Component {
 
   trainNetwork() {
     const {network} = this.state;
-    let learningRate = .3;
+    let learningRate = .01;
     let comidas = this.comidasPorCerveza(0, 0.7); //Usar el 70% de las comidas de cada cerveza para el entrenamiento
-    for (let n = 0; n < 20000; n++) {
-      
+     
+    for(var n = 0; n <= 50000; n++) {
+       
       for(var i in comidas) {
         for(let j = 0; j < comidas[i].length; j++) {
           network.activate([
@@ -178,18 +192,55 @@ class App extends Component {
           ]);
           network.propagate(learningRate, [comidas[i][j].cerveza]);
         }
+        
       }
+      
     }
+    
     this.setState({network});
     
-    alert('Entrenamiento listo!');
+    this.test();
+  }
+  
+  test() {
+    
+    const {network} = this.state;
+    let precision = 0;
+    var comidas = this.comidasPorCerveza(0.7, 1); //Validar con el 30% restante
+    
+    let validate = function(comida) {
+
+      let calc = network.activate([comida.sabor, comida.nivel, comida.grasas, comida.ahumado, comida.caliente, comida.cocina]);
+      if(Math.round(calc) === comida.cerveza)
+        precision++;
+      
+    };
+    
+    for(var i in comidas)
+      comidas[i].forEach(validate);
+    
+    this.setState({ precision: ((precision/this.comidas.length)*100).toFixed(2) });
+    
   }
 
   getOutput() {
     const { sabor, nivel, grasas, ahumado, caliente, cocina, network } = this.state;
+    const output = network.activate([parseInt(sabor), parseInt(nivel), parseInt(grasas), parseInt(ahumado), parseInt(caliente), parseInt(cocina)]);
+    
     this.setState({
-      output: network.activate([parseInt(sabor), parseInt(nivel), parseInt(grasas), parseInt(ahumado), parseInt(caliente), parseInt(cocina)])
+      output: output,
+      cerveza: this.cervezaPorId(output)
     });
+  }
+  
+  cervezaPorId(id) {
+    id = Math.round(id);
+
+    for(let i in this.cervezasNombres)
+      if(this.cervezasNombres[i] === id)
+        return i;
+        
+    return 'N/A';
   }
 
   render() {
@@ -197,6 +248,8 @@ class App extends Component {
       <div className="App">
         <header className="App-header">
           <button onClick={this.trainNetwork.bind(this)}> Entrenar red neuronal </button>
+          <h4>Resultado</h4>
+          <p>Precisión: {this.state.precision}%</p>
           <h4> Probar red :</h4>
           <h6> Entradas: </h6>
           <div className="inputs">
@@ -228,8 +281,8 @@ class App extends Component {
               <select onChange={e => this.setState({grasas: e.target.value})}>
                 <option>Seleccione</option>
                 <option value={GRASAS_ALTO}>Alto</option>
-                <option value={GRASAS_BAJO}>Medio</option>
-                <option value={GRASAS_MEDIO}>Bajo</option>
+                <option value={GRASAS_MEDIO}>Medio</option>
+                <option value={GRASAS_BAJO}>Bajo</option>
                 <option value={GRASAS_NO}>Sin grasas</option>
               </select> 
             </label>
@@ -265,7 +318,7 @@ class App extends Component {
             </label>
           </div>
           <button onClick={this.getOutput.bind(this)}> Obtener cerveza </button>
-          <h6> Salida: {this.state.output}</h6>
+          <h6> Salida: {this.state.output} ({this.state.cerveza})</h6>
         </header>
       </div>
     );

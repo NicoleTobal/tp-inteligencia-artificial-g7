@@ -31,6 +31,10 @@
   }
 }
 
+p {
+  font-size: 14px;
+}
+
 label {
   font-size: 14px;
   display: inline-block;
