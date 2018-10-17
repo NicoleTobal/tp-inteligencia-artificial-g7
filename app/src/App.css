@@ -30,3 +30,17 @@
     transform: rotate(360deg);
   }
 }
+
+label {
+  font-size: 14px;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 20px 10px;
+  text-align: left;
+}
+
+  label select {
+    display: block;
+    margin-top: 5px;
+    width: 100%;
+  }
