@@ -142,7 +142,7 @@ class App extends Component {
     return arr;
     
   }
-
+  
   createNetwork() {
     const { Layer, Network, Neuron } = synaptic;
 
@@ -160,7 +160,8 @@ class App extends Component {
     let outputLayer = new Layer(1);
     
     outputLayer.set({
-      squash: Neuron.squash.IDENTITY
+	  //squash: Neuron.squash.IDENTITY
+	  squash: Neuron.squash.TANH
     });
 
     // Une las capas y forma la red
